@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>学生の成果記録と評価システム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f172a;--panel:#111827;--muted:#374151;--text:#e5e7eb;--accent:#22d3ee;--accent2:#a78bfa;
+      --good:#10b981;--warn:#f59e0b;--danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1327,#0f172a 50%,#0b1327),radial-gradient(1000px 500px at 100% 0%,rgba(167,139,250,.25),transparent 60%);
+         color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;}
+    header{padding:24px;border-bottom:1px solid #1f2937;background:rgba(17,24,39,.7);backdrop-filter:blur(6px);position:sticky;top:0;z-index:10}
+    header h1{margin:0;font-size:20px;letter-spacing:.04em}
+    header small{color:#9ca3af}
+    main{padding:24px;max-width:1100px;margin:0 auto}
+    .grid{display:grid;gap:16px}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(12,1fr)}}
+    .card{grid-column:span 12;background:rgba(17,24,39,.7);border:1px solid #1f2937;border-radius:14px;padding:18px}
+    .card h2{margin:0 0 10px 0;font-size:18px;color:#cffafe}
+    .card h3{margin:16px 0 10px;font-size:15px;color:#a7f3d0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    label{display:block;margin:8px 0 4px;color:#93c5fd;font-size:13px}
+    input,select,textarea,button{background:#0b1222;color:var(--text);border:1px solid #1f2937;border-radius:10px;padding:10px;font-size:14px}
+    textarea{width:100%;min-height:110px;resize:vertical}
+    input[type="file"]{padding:8px}
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0a0a0a;border:none}
+    button.ghost{background:#0b1222}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#0b1222;border:1px solid #1f2937;padding:8px 10px;border-radius:999px;font-size:12px;color:#a3a3a3}
+    .list{display:grid;gap:10px}
+    .item{border:1px dashed #374151;border-radius:12px;padding:10px}
+    .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+    .thumb{border:1px solid #374151;border-radius:12px;overflow:hidden;background:#0b1222}
+    .thumb img{width:100%;height:120px;object-fit:cover;display:block}
+    .muted{color:#94a3b8}
+    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .kpi .box{border:1px solid #1f2937;border-radius:12px;padding:12px;background:#0b1222}
+    .kpi .box b{display:block;color:#93c5fd;margin-bottom:6px}
+    .table{width:100%;border-collapse:collapse;font-size:14px}
+    .table th,.table td{border-bottom:1px solid #1f2937;padding:10px;text-align:left}
+    .badge{padding:4px 8px;border-radius:999px;font-size:12px;background:#0b1222;border:1px solid #374151}
+    .good{color:var(--good)}
+    .warn{color:var(--warn)}
+    .danger{color:var(--danger)}
+    .weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+    .footer{margin-top:24px;color:#94a3b8;font-size:12px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .inline{display:inline-flex;gap:8px;align-items:center}
+    .progress{height:10px;background:#0b1222;border:1px solid #1f2937;border-radius:999px;overflow:hidden}
+    .progress div{height:100%;background:linear-gradient(90deg,#34d399,#22d3ee);width:0%}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>学生の成果記録と評価システム <small>v0.9 プロトタイプ</small></h1>
+    <div class="inline">
+      <span class="pill">グループ管理</span>
+      <span class="pill">個人記録</span>
+      <span class="pill">評価レポート</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid">
+      <!-- Group & student setup -->
+      <div class="card" id="setup">
+        <h2>グループ設定と学生管理</h2>
+        <div class="row">
+          <div style="flex:1 1 260px">
+            <label>グループ名</label>
+            <input id="groupName" placeholder="例：2025年度HCIゼミA" />
+          </div>
+          <div style="flex:1 1 260px">
+            <label>教授名</label>
+            <input id="profName" placeholder="例：山田太郎" />
+          </div>
+        </div>
+        <div class="row">
+          <div style="flex:2 1 400px">
+            <label>学生を追加</label>
+            <div class="inline">
+              <input id="studentName" placeholder="氏名" />
+              <input id="studentId" placeholder="学籍番号/ID" />
+              <button class="primary" onclick="addStudent()">追加</button>
+            </div>
+            <div class="list" id="studentList" style="margin-top:10px"></div>
+          </div>
+          <div style="flex:1 1 240px">
+            <label>データの保存・復元</label>
+            <div class="row">
+              <button class="ghost" onclick="downloadJSON()">JSONを書き出し</button>
+              <label class="pill" for="importFile">JSONを読み込み<input id="importFile" type="file" accept="application/json" style="margin-left:8px"></label>
+            </div>
+            <p class="muted">注意：ローカル保存はブラウザ内メモリです。サーバー導入時は永続化（DB）へ。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timer -->
+      <div class="card">
+        <h2>① 作業時間のタイマー</h2>
+        <div class="row">
+          <select id="timerStudent"></select>
+          <input id="taskName" placeholder="タスク名（例：データ整理）" />
+          <button class="primary" onclick="startTimer()">開始</button>
+          <button class="ghost" onclick="stopTimer()">停止</button>
+          <span class="badge">経過 <span id="elapsed">00:00:00</span></span>
+        </div>
+        <div class="list" id="timerLogs" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Meeting photos -->
+      <div class="card">
+        <h2>② 対面ミーティング写真のアップロード</h2>
+        <div class="row">
+          <select id="photoStudent"></select>
+          <input id="meetingDate" type="date" />
+          <input id="meetingNote" placeholder="メモ（議題・参加者など）" />
+          <input id="meetingPhotos" type="file" accept="image/*" multiple />
+          <button class="primary" onclick="addPhotos()">アップロード</button>
+        </div>
+        <div class="thumbs" id="photoGallery" style="margin-top:12px"></div>
+      </div>
+
+      <!-- Shared doc character count -->
+      <div class="card">
+        <h2>③ 共有ドキュメントの入力文字数</h2>
+        <p class="muted">Google DocsやNotionからの自動取得はサーバー＋API連携が必要。ここではペースト/入力から文字数を集計します。</p>
+        <div class="row">
+          <select id="docStudent"></select>
+          <input id="docTitle" placeholder="ドキュメント名（例：仕様書v2）" />
+        </div>
+        <label>該当箇所のテキスト</label>
+        <textarea id="docText" placeholder="共同編集箇所を貼り付けてください"></textarea>
+        <div class="row">
+          <button class="primary" onclick="countChars()">文字数を記録</button>
+          <span class="badge">直近文字数：<span id="lastDocCount">0</span></span>
+        </div>
+        <table class="table" style="margin-top:10px">
+          <thead><tr><th>学生</th><th>ドキュメント</th><th>文字数</th><th>日時</th></tr></thead>
+          <tbody id="docLogs"></tbody>
+        </table>
+      </div>
+
+      <!-- Thought process -->
+      <div class="card">
+          <h2>④ 思考プロセスの入力</h2>
+        <div class="row">
+          <select id="thinkStudent"></select>
+          <input id="thinkTitle" placeholder="テーマ（例：分析方針）" />
+        </div>
+      <label>思考プロセス・意思決定の記録</label>
+      <textarea id="thinkText" placeholder="観察、仮説、検証、反省点、次の一手など"></textarea>
+      <div class="row">
+    <label class="inline">
+      <input type="checkbox" id="thinkAnon" /> 匿名で共有する
+    </label>
+    <button class="primary" onclick="saveThinking()">保存</button>
+  </div>
+  <h3>個人ログ</h3>
+  <div class="list" id="thinkLogs" style="margin-top:10px"></div>
+  <h3>匿名共有ログ</h3>
+  <div class="list" id="anonThinkLogs" style="margin-top:10px"></div>
+</div>
+
+<script>
+  // 思考ログ保存
+  function saveThinking(){
+    const studentId = document.getElementById('thinkStudent').value;
+    const title = (document.getElementById('thinkTitle').value || '思考ログ').trim();
+    const text = document.getElementById('thinkText').value.trim();
+    const anon = document.getElementById('thinkAnon').checked;
+    if(!studentId){ alert('学生を選択してください'); return; }
+    if(!text){ alert('内容を入力してください'); return; }
+
+    const entry = {studentId,title,text,timestamp:Date.now(),anon};
+    state.thinking.push(entry);
+
+    // 入力欄リセット
+    document.getElementById('thinkText').value='';
+    document.getElementById('thinkAnon').checked=false;
+
+    renderThinking();
+  }
+
+  // 思考ログ表示
+  function renderThinking(){
+    const list = document.getElementById('thinkLogs');
+    const anonList = document.getElementById('anonThinkLogs');
+
+    const personal = state.thinking.filter(t=>!t.anon);
+    const anon = state.thinking.filter(t=>t.anon);
+
+    list.innerHTML = personal.length ? personal.slice().reverse().map(t=>`
+      <div class="item">
+        <div><b>${t.title}</b> — ${byId(t.studentId)?.name || t.studentId}</div>
+        <div class="muted">${fmtDT(t.timestamp)}</div>
+        <div style="margin-top:6px;white-space:pre-wrap">${t.text}</div>
+      </div>
+    `).join('') : '<div class="muted">記録がありません。</div>';
+
+    anonList.innerHTML = anon.length ? anon.slice().reverse().map(t=>`
+      <div class="item">
+        <div><b>${t.title}</b> — 匿名投稿</div>
+        <div class="muted">${fmtDT(t.timestamp)}</div>
+        <div style="margin-top:6px;white-space:pre-wrap">${t.text}</div>
+      </div>
+    `).join('') : '<div class="muted">匿名共有はまだありません。</div>';
+  }
+</script>
+      <!-- Final deliverable upload -->
+      <div class="card">
+        <h2>⑤ 最終成果物のアップロード</h2>
+        <div class="row">
+          <select id="deliverStudent"></select>
+          <input id="deliverTitle" placeholder="成果物名（例：最終レポートPDF）" />
+          <input id="deliverFile" type="file" />
+          <button class="primary" onclick="addDeliverable()">アップロード</button>
+        </div>
+        <div class="list" id="deliverLogs" style="margin-top:10px"></div>
+        <p class="muted">注：ローカル環境ではファイルはブラウザ内URLでプレビューのみ。実運用はサーバー保存＋アクセス制御が必要。</p>
+      </div>
+
+      <!-- LINE integration -->
+      <div class="card">
+        <h2>⑥ LINEグループチャット発言回数の記録</h2>
+        <p class="muted">実運用はLINE Messaging APIとWebhookでサーバー連携が必要。ここではエクスポート/CSVから取り込みを行います。</p>
+        <div class="row">
+          <input id="lineGroupName" placeholder="LINEグループ名" />
+          <input id="lineFile" type="file" accept=".csv,.txt" />
+          <button class="primary" onclick="importLine()">取り込み</button>
+        </div>
+        <table class="table" style="margin-top:10px">
+          <thead><tr><th>学生</th><th>発言回数</th><th>最終発言日時</th></tr></thead>
+          <tbody id="lineLogs"></tbody>
+        </table>
+      </div>
+
+      <!-- Evaluation -->
+      <div class="card">
+        <h2>⑦ 総合評価（パーセンテージで貢献度を算出）</h2>
+        <div class="weights">
+          <div class="box">
+            <b>重み：作業時間</b>
+            <input id="wTime" type="number" min="0" max="100" value="20" /> %
+          </div>
+          <div class="box">
+            <b>重み：写真（ミーティング）</b>
+            <input id="wPhoto" type="number" min="0" max="100" value="10" /> %
+          </div>
+          <div class="box">
+            <b>重み：ドキュメント文字数</b>
+            <input id="wDoc" type="number" min="0" max="100" value="25" /> %
+          </div>
+          <div class="box">
+            <b>重み：思考プロセス</b>
+            <input id="wThink" type="number" min="0" max="100" value="15" /> %
+          </div>
+          <div class="box">
+            <b>重み：成果物</b>
+            <input id="wDeliver" type="number" min="0" max="100" value="20" /> %
+          </div>
+          <div class="box">
+            <b>重み：LINE発言</b>
+            <input id="wLine" type="number" min="0" max="100" value="10" /> %
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="primary" onclick="computeScores()">貢献度を計算</button>
+          <span class="badge">重み合計は100%推奨</span>
+          <button class="ghost" onclick="exportReport()">CSV書き出し</button>
+        </div>
+        <div class="kpi" style="margin-top:12px" id="kpi"></div>
+        <table class="table" style="margin-top:10px">
+          <thead>
+            <tr><th>学生</th><th>作業時間(分)</th><th>写真数</th><th>文字数</th><th>思考ログ数</th><th>成果物数</th><th>LINE発言</th><th>貢献度(%)</th></tr>
+          </thead>
+          <tbody id="scoreTable"></tbody>
+        </table>
+        <div class="progress" style="margin-top:10px"><div id="groupProgress"></div></div>
+        <p class="muted">算出は各指標をグループ内で0〜1に正規化し、重み付け合計を100倍します（詳細はコード参照）。</p>
+      </div>
+    </section>
+
+    <div class="footer">
+      <p>プライバシーへの配慮：写真やチャットログは本人同意のうえ、学内ポリシーに基づき保管してください。API連携はアクセストークン保護とアクセス制御が必須です。</p>
+    </div>
+  </main>
+
+  <script>
+    // ------ Data model ------
+    const state = {
+      group:{ name:"", prof:"" },
+      students:[], // {id,name}
+      timers:[], // {studentId, task, start, end, minutes}
+      photos:[], // {studentId,date,note,blobUrl}
+      docs:[], // {studentId,title,count,timestamp}
+      thinking:[], // {studentId,title,text,timestamp}
+      deliverables:[], // {studentId,title,blobUrl,filename,timestamp}
+      line:[], // {studentId,count,last}
+      scores:[] // computed
+    };
+
+    // ------ Helpers ------
+    const $ = sel => document.querySelector(sel);
+    const fmtDT = ts => new Date(ts).toLocaleString();
+    const fmtM = m => `${Math.floor(m/60)}h ${Math.round(m%60)}m`;
+    const byId = id => state.students.find(s=>s.id===id);
+    const safe = s => (s||"").trim();
+    const now = () => Date.now();
+
+    function updateGroup(){
+      state.group.name = safe($('#groupName').value);
+      state.group.prof = safe($('#profName').value);
+    }
+    $('#groupName').addEventListener('input',updateGroup);
+    $('#profName').addEventListener('input',updateGroup);
+
+    function refreshStudentSelectors(){
+      const selects = ['timerStudent','photoStudent','docStudent','thinkStudent','deliverStudent'];
+      selects.forEach(id=>{
+        const el = $('#'+id);
+        const current = el.value;
+        el.innerHTML = state.students.map(s=>`<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+        if(state.students.length && current && state.students.some(s=>s.id===current)) el.value = current;
+      });
+      renderStudents();
+    }
+
+    function addStudent(){
+      const name = safe($('#studentName').value);
+      const id = safe($('#studentId').value);
+      if(!name || !id){ alert('氏名とIDを入力してください'); return; }
+      if(state.students.some(s=>s.id===id)){ alert('同じIDが存在します'); return; }
+      state.students.push({id,name});
+      $('#studentName').value=''; $('#studentId').value='';
+      refreshStudentSelectors();
+    }
+
+    function renderStudents(){
+      const list = $('#studentList');
+      if(!state.students.length){ list.innerHTML = '<div class="muted">学生がまだ追加されていません。</div>'; return; }
+      list.innerHTML = state.students.map(s=>`
+        <div class="item">
+          <div class="inline">
+            <b>${s.name}</b><span class="badge mono">${s.id}</span>
+            <button class="ghost" onclick="removeStudent('${s.id}')">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    function removeStudent(id){
+      if(!confirm('この学生を削除しますか？')) return;
+      state.students = state.students.filter(s=>s.id!==id);
+      // cascade remove related records
+      ['timers','photos','docs','thinking','deliverables','line'].forEach(key=>{
+        state[key] = state[key].filter(r=>r.studentId!==id);
+      });
+      refreshStudentSelectors(); renderTimers(); renderPhotos(); renderDocs(); renderThinking(); renderDeliverables(); renderLine(); renderScores();
+    }
+
+    // ------ JSON export/import ------
+    function downloadJSON(){
+      const data = JSON.stringify(state,null,2);
+      const blob = new Blob([data],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='group-data.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    $('#importFile').addEventListener('change', (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      const fr = new FileReader();
+      fr.onload = () => {
+        try{
+          const data = JSON.parse(fr.result);
+          Object.assign(state,data);
+          refreshStudentSelectors(); renderTimers(); renderPhotos(); renderDocs(); renderThinking(); renderDeliverables(); renderLine(); renderScores();
+        }catch(err){ alert('JSONの読み込みに失敗しました'); }
+      };
+      fr.readAsText(file);
+    });
+
+    // ------ Timer ------
+    let runningTimer = null; // {studentId, task, start}
+    let intervalId = null;
+
+    function startTimer(){
+      const studentId = $('#timerStudent').value;
+      const task = safe($('#taskName').value) || '未命名タスク';
+      if(!studentId){ alert('学生を選択してください'); return; }
+      if(runningTimer){ alert('既にタイマーが動作中です'); return; }
+      runningTimer = {studentId, task, start: now()};
+      intervalId = setInterval(updateElapsed,250);
+    }
+    function stopTimer(){
+      if(!runningTimer) return;
+      const end = now();
+      const minutes = (end - runningTimer.start) / 60000;
+      state.timers.push({studentId:runningTimer.studentId, task:runningTimer.task, start:runningTimer.start, end, minutes});
+      clearInterval(intervalId); intervalId = null;
+      runningTimer = null;
+      $('#elapsed').textContent = '00:00:00';
+      renderTimers();
+    }
+    function updateElapsed(){
+      if(!runningTimer) return;
+      const ms = now() - runningTimer.start;
+      const hh = String(Math.floor(ms/3600000)).padStart(2,'0');
+      const mm = String(Math.floor(ms%3600000/60000)).padStart(2,'0');
+      const ss = String(Math.floor(ms%60000/1000)).padStart(2,'0');
+      $('#elapsed').textContent = `${hh}:${mm}:${ss}`;
+    }
+    function renderTimers(){
+      const container = $('#timerLogs');
+      if(!state.timers.length){ container.innerHTML = '<div class="muted">記録がありません。</div>'; return; }
+      container.innerHTML = state.timers.slice().reverse().map(t=>`
+        <div class="item">
+          <div><b>${byId(t.studentId)?.name || t.studentId}</b> — ${t.task}</div>
+          <div class="muted">${fmtDT(t.start)} 〜 ${fmtDT(t.end)} / ${fmtM(t.minutes)}</div>
+        </div>
+      `).join('');
+    }
+
+    // ------ Photos ------
+    function addPhotos(){
+      const studentId = $('#photoStudent').value;
+      const date = $('#meetingDate').value || new Date().toISOString().slice(0,10);
+      const note = safe($('#meetingNote').value);
+      const files = $('#meetingPhotos').files;
+      if(!studentId){ alert('学生を選択してください'); return; }
+      if(!files.length){ alert('写真ファイルを選択してください'); return; }
+      Array.from(files).forEach(f=>{
+        const url = URL.createObjectURL(f);
+        state.photos.push({studentId,date,note,blobUrl:url});
+      });
+      $('#meetingPhotos').value='';
+      renderPhotos();
+    }
+    function renderPhotos(){
+      const g = $('#photoGallery');
+      if(!state.photos.length){ g.innerHTML = '<div class="muted">写真はまだありません。</div>'; return; }
+      g.innerHTML = state.photos.slice().reverse().map(p=>`
+        <div class="thumb">
+          <img src="${p.blobUrl}" alt="meeting photo">
+          <div style="padding:8px;font-size:12px">
+            <b>${byId(p.studentId)?.name || p.studentId}</b> / ${p.date}<br/>
+            <span class="muted">${p.note || ''}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ------ Docs ------
+    function countChars(){
+      const studentId = $('#docStudent').value;
+      const title = safe($('#docTitle').value) || '無題';
+      const text = $('#docText').value || '';
+      const count = [...text].length; // counts Unicode code units; surrogate pairs approximated
+      if(!studentId){ alert('学生を選択してください'); return; }
+      state.docs.push({studentId,title,count,timestamp:now()});
+      $('#lastDocCount').textContent = count;
+      $('#docText').value = '';
+      renderDocs();
+    }
+    function renderDocs(){
+      const body = $('#docLogs');
+      if(!state.docs.length){ body.innerHTML = '<tr><td colspan="4" class="muted">記録がありません。</td></tr>'; return; }
+      body.innerHTML = state.docs.slice().reverse().map(d=>`
+        <tr>
+          <td>${byId(d.studentId)?.name || d.studentId}</td>
+          <td>${d.title}</td>
+          <td class="mono">${d.count}</td>
+          <td>${fmtDT(d.timestamp)}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ------ Thinking ------
+    function saveThinking(){
+      const studentId = $('#thinkStudent').value;
+      const title = safe($('#thinkTitle').value) || '思考ログ';
+      const text = $('#thinkText').value;
+      if(!studentId){ alert('学生を選択してください'); return; }
+      if(!text.trim()){ alert('内容を入力してください'); return; }
+      state.thinking.push({studentId,title,text,timestamp:now()});
+      $('#thinkText').value='';
+      renderThinking();
+    }
+    function renderThinking(){
+      const list = $('#thinkLogs');
+      if(!state.thinking.length){ list.innerHTML = '<div class="muted">記録がありません。</div>'; return; }
+      list.innerHTML = state.thinking.slice().reverse().map(t=>`
+        <div class="item">
+          <div><b>${t.title}</b> — ${byId(t.studentId)?.name || t.studentId}</div>
+          <div class="muted">${fmtDT(t.timestamp)}</div>
+          <div style="margin-top:6px;white-space:pre-wrap">${t.text}</div>
+        </div>
+      `).join('');
+    }
+
+    // ------ Deliverables ------
+    function addDeliverable(){
+      const studentId = $('#deliverStudent').value;
+      const title = safe($('#deliverTitle').value) || '成果物';
+      const file = $('#deliverFile').files[0];
+      if(!studentId){ alert('学生を選択してください'); return; }
+      if(!file){ alert('ファイルを選択してください'); return; }
+      const url = URL.createObjectURL(file);
+      state.deliverables.push({studentId,title,blobUrl:url,filename:file.name,timestamp:now()});
+      $('#deliverFile').value='';
+      renderDeliverables();
+    }
+    function renderDeliverables(){
+      const list = $('#deliverLogs');
+      if(!state.deliverables.length){ list.innerHTML = '<div class="muted">成果物はまだありません。</div>'; return; }
+      list.innerHTML = state.deliverables.slice().reverse().map(d=>`
+        <div class="item">
+          <div class="inline">
+            <b>${d.title}</b><span class="badge">${d.filename}</span>
+          </div>
+          <div class="muted">${byId(d.studentId)?.name || d.studentId} — ${fmtDT(d.timestamp)}</div>
+          <div style="margin-top:6px">
+            <a href="${d.blobUrl}" target="_blank">プレビュー</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ------ LINE import (CSV/TXT heuristic) ------
+    function importLine(){
+      const file = $('#lineFile').files[0];
+      if(!file){ alert('CSV/TXTを選択してください'); return; }
+      const fr = new FileReader();
+      fr.onload = () => {
+        const text = fr.result;
+        // naive parse: count lines containing student name
+        const counts = {};
+        state.students.forEach(s=>counts[s.id]={count:0,last:null,name:s.name});
+        const lines = text.split(/\r?\n/);
+        lines.forEach(line=>{
+          state.students.forEach(s=>{
+            // match "Name: message" or "[Name]" patterns
+            const name = s.name;
+            if(line.startsWith(name+':') || line.includes('['+name+']')){
+              const dt = new Date();
+              counts[s.id].count++;
+              counts[s.id].last = dt; // without timestamp in export, use import time; adjust if CSV has dates
+            }
+          });
+        });
+        // update state
+        state.line = Object.keys(counts).map(id=>({
+          studentId:id,
+          count:counts[id].count,
+          last:counts[id].last ? counts[id].last.getTime() : null
+        }));
+        renderLine();
+      };
+      fr.readAsText(file);
+    }
+    function renderLine(){
+      const body = $('#lineLogs');
+      if(!state.line.length){ body.innerHTML = '<tr><td colspan="3" class="muted">データがありません。</td></tr>'; return; }
+      body.innerHTML = state.line.map(l=>`
+        <tr>
+          <td>${byId(l.studentId)?.name || l.studentId}</td>
+          <td class="mono">${l.count}</td>
+          <td>${l.last ? fmtDT(l.last) : '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ------ Evaluation ------
+    function computeScores(){
+      // aggregate per student
+      const agg = {};
+      state.students.forEach(s=>agg[s.id]={id:s.id,name:s.name,time:0,photos:0,chars:0,think:0,deliver:0,line:0});
+      state.timers.forEach(t=>{ agg[t.studentId].time += t.minutes; });
+      state.photos.forEach(p=>{ agg[p.studentId].photos += 1; });
+      state.docs.forEach(d=>{ agg[d.studentId].chars += d.count; });
+      state.thinking.forEach(t=>{ agg[t.studentId].think += 1; });
+      state.deliverables.forEach(d=>{ agg[d.studentId].deliver += 1; });
+      state.line.forEach(l=>{ agg[l.studentId].line += l.count; });
+
+      const items = Object.values(agg);
+      // normalize each metric 0..1 by group max (if max=0 -> all 0)
+      const maxes = {
+        time: Math.max(...items.map(i=>i.time),0),
+        photos: Math.max(...items.map(i=>i.photos),0),
+        chars: Math.max(...items.map(i=>i.chars),0),
+        think: Math.max(...items.map(i=>i.think),0),
+        deliver: Math.max(...items.map(i=>i.deliver),0),
+        line: Math.max(...items.map(i=>i.line),0),
+      };
+      const w = {
+        time: Number($('#wTime').value||0),
+        photos: Number($('#wPhoto').value||0),
+        chars: Number($('#wDoc').value||0),
+        think: Number($('#wThink').value||0),
+        deliver: Number($('#wDeliver').value||0),
+        line: Number($('#wLine').value||0),
+      };
+      const wSum = w.time+w.photos+w.chars+w.think+w.deliver+w.line;
+
+      state.scores = items.map(i=>{
+        const n = {
+          time: maxes.time? i.time/maxes.time : 0,
+          photos: maxes.photos? i.photos/maxes.photos : 0,
+          chars: maxes.chars? i.chars/maxes.chars : 0,
+          think: maxes.think? i.think/maxes.think : 0,
+          deliver: maxes.deliver? i.deliver/maxes.deliver : 0,
+          line: maxes.line? i.line/maxes.line : 0,
+        };
+        const score = wSum ? (
+          (n.time*w.time + n.photos*w.photos + n.chars*w.chars + n.think*w.think + n.deliver*w.deliver + n.line*w.line) / wSum * 100
+        ) : 0;
+        return {...i, score: Math.round(score*10)/10};
+      });
+      renderScores();
+    }
+
+    function renderScores(){
+      const kpi = $('#kpi');
+      if(!state.scores.length){ kpi.innerHTML=''; $('#scoreTable').innerHTML=''; $('#groupProgress').style.width='0%'; return; }
+      const avg = state.scores.reduce((a,b)=>a+b.score,0)/state.scores.length;
+      kpi.innerHTML = `
+        <div class="box"><b>グループ平均</b><div class="good">${avg.toFixed(1)}%</div></div>
+        <div class="box"><b>最高</b><div class="good">${Math.max(...state.scores.map(s=>s.score)).toFixed(1)}%</div></div>
+        <div class="box"><b>最低</b><div class="warn">${Math.min(...state.scores.map(s=>s.score)).toFixed(1)}%</div></div>
+        <div class="box"><b>重み合計</b><div class="mono">${(Number($('#wTime').value)+Number($('#wPhoto').value)+Number($('#wDoc').value)+Number($('#wThink').value)+Number($('#wDeliver').value)+Number($('#wLine').value))}%</div></div>
+      `;
+      $('#groupProgress').style.width = `${avg}%`;
+
+      const body = $('#scoreTable');
+      body.innerHTML = state.scores.map(s=>`
+        <tr>
+          <td>${s.name}</td>
+          <td class="mono">${Math.round(s.time)}</td>
+          <td class="mono">${s.photos}</td>
+          <td class="mono">${s.chars}</td>
+          <td class="mono">${s.think}</td>
+          <td class="mono">${s.deliver}</td>
+          <td class="mono">${s.line}</td>
+          <td><span class="badge">${s.score}%</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function exportReport(){
+      if(!state.scores.length){ alert('まず貢献度を計算してください'); return; }
+      const lines = ['学生,作業時間(分),写真数,文字数,思考ログ数,成果物数,LINE発言,貢献度(%)'];
+      state.scores.forEach(s=>{
+        lines.push(`${s.name},${Math.round(s.time)},${s.photos},${s.chars},${s.think},${s.deliver},${s.line},${s.score}`);
+      });
+      const blob = new Blob([lines.join('\n')],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='contribution_report.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ------ Init ------
+    function seed(){
+      const demo = [
+        {id:'S001',name:'佐藤'},
+        {id:'S002',name:'鈴木'},
+        {id:'S003',name:'田中'}
+      ];
+      state.students.push(...demo);
+      refreshStudentSelectors();
+    }
+    seed();
+  </script>
+</body>
+</html>
