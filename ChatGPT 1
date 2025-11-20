@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>学生成果記録・評価システム</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fb;
+      color: #333;
+    }
+
+    header {
+      background: #3f51b5;
+      color: #fff;
+      padding: 16px 24px;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    main {
+      padding: 16px;
+      max-width: 1200px;
+      margin: 0 auto 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px 18px 18px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    section h2 {
+      margin-top: 0;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    section h2 span.badge {
+      background: #e8eaf6;
+      color: #303f9f;
+      border-radius: 999px;
+      font-size: 11px;
+      padding: 2px 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin: 8px 0 4px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      border: none;
+      outline: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-right: 4px;
+      margin-top: 6px;
+    }
+
+    button.primary {
+      background: #3f51b5;
+      color: #fff;
+    }
+
+    button.secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    button.danger {
+      background: #e53935;
+      color: #fff;
+    }
+
+    small {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eee;
+      font-size: 11px;
+      margin: 2px 2px 0 0;
+    }
+
+    .student-list {
+      margin-top: 8px;
+    }
+
+    .student-list span {
+      margin-right: 4px;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+
+    .timer-display {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    .small-text {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .upload-list {
+      font-size: 12px;
+      max-height: 100px;
+      overflow-y: auto;
+      margin-top: 6px;
+      border-top: 1px dashed #ddd;
+      padding-top: 4px;
+    }
+
+    .thought-feed {
+      max-height: 220px;
+      overflow-y: auto;
+      border-top: 1px solid #eee;
+      margin-top: 8px;
+      padding-top: 6px;
+      font-size: 12px;
+    }
+
+    .thought-card {
+      border-radius: 6px;
+      background: #f5f5f5;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+    }
+
+    .thought-card-header {
+      font-size: 11px;
+      color: #555;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .thought-card-body {
+      margin-top: 4px;
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #e8eaf6;
+    }
+
+    tfoot td {
+      background: #fafafa;
+      font-weight: bold;
+    }
+
+    .warning {
+      color: #e53935;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>学生成果記録・評価システム</h1>
+    <p>作業時間・ドキュメント文字数・思考プロセス・アップロード・LINE発言数などをもとに、グループへの貢献度を可視化します（デモ版）。</p>
+  </header>
+
+  <main>
+    <!-- 学生管理 -->
+    <section id="student-management">
+      <h2>学生管理 <span class="badge">基本</span></h2>
+      <label for="student-name-input">学生名を追加</label>
+      <input type="text" id="student-name-input" placeholder="例）山田太郎">
+      <button class="primary" onclick="addStudent()">学生を追加</button>
+      <div class="student-list" id="student-list"></div>
+      <small class="small-text">※学生名は、後述の全ての機能（タイマー、アップロード、貢献度計算など）で共通して使われます。</small>
+    </section>
+
+    <div class="grid">
+      <!-- ① 作業時間タイマー -->
+      <section id="timer-section">
+        <h2>① 作業時間タイマー <span class="badge">時間記録</span></h2>
+        <label for="timer-student-select">学生を選択</label>
+        <select id="timer-student-select" class="student-select">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="small-text" id="timer-info"></div>
+
+        <div>
+          <button class="primary" onclick="startTimer()">開始 / 再開</button>
+          <button class="secondary" onclick="pauseTimer()">一時停止</button>
+          <button class="danger" onclick="resetTimer()">リセット</button>
+        </div>
+        <small class="small-text">
+          ※選択中の学生の作業時間を加算します。貢献度計算の指標（重み0.3）として利用されます。
+        </small>
+      </section>
+
+      <!-- ② 写真アップロード -->
+      <section id="photo-upload-section">
+        <h2>② ミーティング写真アップロード <span class="badge">証跡</span></h2>
+        <label for="photo-student-select">学生を選択（ミーティング参加メンバーの代表者など）</label>
+        <select id="photo-student-select" class="student-select">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <label for="photo-upload-input">対面ミーティングの写真</label>
+        <input type="file" id="photo-upload-input" accept="image/*" multiple>
+        <button class="primary" onclick="handlePhotoUpload()">アップロード（ローカルデモ）</button>
+        <small class="small-text">※このデモでは実際にはサーバ保存されません。アップロード枚数のみカウントします。</small>
+
+        <div class="upload-list" id="photo-upload-list"></div>
+      </section>
+
+      <!-- ③ 共有ドキュメント文字数 -->
+      <section id="doc-char-section">
+        <h2>③ 共有ドキュメント文字数 <span class="badge">入力量</span></h2>
+        <label for="doc-student-select">編集中の学生を選択</label>
+        <select id="doc-student-select" class="student-select" onchange="onDocStudentChange()">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <label for="doc-textarea">共有ドキュメント内でその学生が入力した内容（抜粋も可）</label>
+        <textarea id="doc-textarea" placeholder="ここにその学生の入力内容を貼り付ける / 再現することで文字数を自動集計します。"></textarea>
+        <div class="small-text">
+          文字数：<span id="doc-char-count">0</span> 文字
+        </div>
+        <small class="small-text">
+          ※実システムではGoogle Docs等のAPIから直接文字数を取得する想定です。このデモではテキストエリアの文字数を学生ごとに記録します（重み0.3）。
+        </small>
+      </section>
+
+      <!-- ④ 思考プロセス入力＋匿名共有 -->
+      <section id="thought-section">
+        <h2>④ 思考プロセス入力 &amp; 匿名共有 <span class="badge">メタ認知</span></h2>
+        <label for="thought-student-select">投稿者（学生）</label>
+        <select id="thought-student-select" class="student-select">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <label for="thought-textarea">思考プロセス・振り返り</label>
+        <textarea id="thought-textarea" placeholder="例）最初はA案で進めようとしたが、調査の結果B案のほうがコスト的に有利だと分かったので方針を変更した。…"></textarea>
+
+        <button class="primary" onclick="shareThoughtAnonymously()">匿名でグループに共有</button>
+        <button class="secondary" onclick="clearThoughtInput()">入力クリア</button>
+        <div class="small-text">
+          ※匿名共有すると、投稿者名を伏せた形で下の「匿名シェアフィード」に表示されます。<br>
+          ※学生ごとの投稿数は貢献度指標（重み0.1）として利用されます。
+        </div>
+
+        <div class="thought-feed" id="thought-feed"></div>
+      </section>
+
+      <!-- ⑤ 最終成果物アップロード -->
+      <section id="deliverable-section">
+        <h2>⑤ 最終成果物アップロード <span class="badge">成果物</span></h2>
+        <label for="deliverable-student-select">代表学生（または担当学生）</label>
+        <select id="deliverable-student-select" class="student-select">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <label for="deliverable-upload-input">最終成果物ファイル（レポート、スライド、コードなど）</label>
+        <input type="file" id="deliverable-upload-input" multiple>
+        <button class="primary" onclick="handleDeliverableUpload()">アップロード（ローカルデモ）</button>
+        <small class="small-text">※このデモではファイルを実際には送信せず、アップロード件数のみカウントします。</small>
+
+        <div class="upload-list" id="deliverable-upload-list"></div>
+      </section>
+
+      <!-- ⑥ LINE発言回数（連携の簡易デモ） -->
+      <section id="line-section">
+        <h2>⑥ LINEグループ発言回数 <span class="badge">コミュニケーション</span></h2>
+        <p class="small-text">
+          実運用では <strong>LINE Messaging API / LIFF</strong> などと連携し、指定グループチャット内の発言ログを取得して自動集計する想定です。<br>
+          このデモでは、学生ごとの発言回数を手入力で登録できるようにしています。
+        </p>
+
+        <label for="line-student-select">学生を選択</label>
+        <select id="line-student-select" class="student-select">
+          <option value="">（学生を追加してください）</option>
+        </select>
+
+        <label for="line-message-count-input">その学生のLINEグループでの発言回数</label>
+        <input type="number" id="line-message-count-input" min="0" value="0">
+        <button class="primary" onclick="updateLineMessages()">発言回数を登録 / 更新</button>
+
+        <div class="warning">
+          ※LINE APIと実際に連携する場合は、ここで更新している値を<br>
+          &nbsp;&nbsp;・グループID / ユーザーID を用いて<br>
+          &nbsp;&nbsp;・指定期間のメッセージ数を自動取得する処理に置き換えてください。<br>
+        </div>
+
+        <div id="line-summary" class="small-text"></div>
+      </section>
+    </div>
+
+    <!-- ⑦ 貢献度計算 -->
+    <section id="contribution-section">
+      <h2>⑦ 貢献度計算（パーセンテージ表示） <span class="badge">評価</span></h2>
+      <p class="small-text">
+        以下の指標から総合貢献度を計算し、グループ内の割合（%）として表示します。<br>
+        ・作業時間（重み0.3）<br>
+        ・共有ドキュメント文字数（重み0.3）<br>
+        ・LINE発言回数（重み0.2）<br>
+        ・匿名思考共有数（重み0.1）<br>
+        ・アップロード件数（写真＋成果物）（重み0.1）
+      </p>
+      <button class="primary" onclick="calculateContribution()">貢献度を再計算</button>
+      <div id="contribution-warning" class="warning"></div>
+
+      <table id="contribution-table">
+        <thead>
+          <tr>
+            <th>学生名</th>
+            <th>作業時間（分）</th>
+            <th>ドキュメント文字数</th>
+            <th>LINE発言回数</th>
+            <th>思考共有数</th>
+            <th>アップロード件数<br><small>(写真+成果物)</small></th>
+            <th>貢献度（%）</th>
+          </tr>
+        </thead>
+        <tbody id="contribution-tbody">
+          <!-- JSで挿入 -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6">グループ合計</td>
+            <td id="contribution-total">0%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    // 学生データ構造
+    // students[name] = {
+    //   totalTimeSec, docText, docChars,
+    //   thoughtCount, lineMessages,
+    //   photoUploads, deliverableUploads
+    // }
+    const students = {};
+
+    // タイマー関連
+    let currentTimerStudent = null;
+    let timerStartTime = null; // Date.now()
+    let timerIntervalId = null;
+
+    // 匿名思考フィード
+    const sharedThoughts = [];
+
+    function addStudent() {
+      const input = document.getElementById("student-name-input");
+      const name = input.value.trim();
+      if (!name) return;
+      if (students[name]) {
+        alert("同じ名前の学生がすでに登録されています。");
+        return;
+      }
+      students[name] = {
+        name,
+        totalTimeSec: 0,
+        docText: "",
+        docChars: 0,
+        thoughtCount: 0,
+        lineMessages: 0,
+        photoUploads: 0,
+        deliverableUploads: 0
+      };
+      input.value = "";
+      refreshStudentDisplays();
+    }
+
+    function refreshStudentDisplays() {
+      // バッジ群
+      const listDiv = document.getElementById("student-list");
+      listDiv.innerHTML = "";
+      Object.keys(students).forEach(name => {
+        const span = document.createElement("span");
+        span.className = "pill";
+        span.textContent = name;
+        listDiv.appendChild(span);
+      });
+
+      // 各セクションのセレクトボックスを更新
+      const selects = document.querySelectorAll("select.student-select");
+      selects.forEach(sel => {
+        const selectedValue = sel.value;
+        sel.innerHTML = '<option value="">（学生を追加してください）</option>';
+        Object.keys(students).forEach(name => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+        // 以前の選択がまだ存在する場合は維持
+        if (selectedValue && students[selectedValue]) {
+          sel.value = selectedValue;
+        }
+      });
+
+      updateLineSummary();
+      updateContributionTable();
+    }
+
+    // ---- タイマー機能 ----
+    function startTimer() {
+      const sel = document.getElementById("timer-student-select");
+      const name = sel.value;
+      if (!name || !students[name]) {
+        alert("タイマーを開始する学生を選択してください。");
+        return;
+      }
+
+      // 別の学生でタイマー動作中なら一旦停止
+      if (timerIntervalId && currentTimerStudent && currentTimerStudent !== name) {
+        pauseTimer();
+      }
+
+      if (!timerIntervalId) {
+        currentTimerStudent = name;
+        timerStartTime = Date.now();
+        timerIntervalId = setInterval(updateTimerDisplay, 500);
+        updateTimerInfo();
+      }
+    }
+
+    function pauseTimer() {
+      if (!timerIntervalId || !currentTimerStudent) return;
+      clearInterval(timerIntervalId);
+      timerIntervalId = null;
+      const student = students[currentTimerStudent];
+      if (timerStartTime) {
+        const elapsedSec = (Date.now() - timerStartTime) / 1000;
+        student.totalTimeSec += elapsedSec;
+      }
+      timerStartTime = null;
+      updateTimerDisplay(true);
+      updateTimerInfo();
+      updateContributionTable();
+    }
+
+    function resetTimer() {
+      const sel = document.getElementById("timer-student-select");
+      const name = sel.value;
+      if (!name || !students[name]) {
+        alert("リセットする学生を選択してください。");
+        return;
+      }
+      const ok = confirm(name + " さんの累計作業時間を 0 にリセットしますか？");
+      if (!ok) return;
+
+      if (currentTimerStudent === name && timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+      students[name].totalTimeSec = 0;
+      if (currentTimerStudent === name) {
+        timerStartTime = Date.now();
+        timerIntervalId = setInterval(updateTimerDisplay, 500);
+      }
+      updateTimerDisplay(true);
+      updateTimerInfo();
+      updateContributionTable();
+    }
+
+    function updateTimerDisplay(force) {
+      const display = document.getElementById("timer-display");
+      const sel = document.getElementById("timer-student-select");
+      const name = sel.value;
+      if (!name || !students[name]) {
+        display.textContent = "00:00:00";
+        return;
+      }
+      const student = students[name];
+      let total = student.totalTimeSec;
+      if (timerIntervalId && currentTimerStudent === name && !force && timerStartTime) {
+        total += (Date.now() - timerStartTime) / 1000;
+      }
+      display.textContent = formatSeconds(total);
+    }
+
+    function updateTimerInfo() {
+      const info = document.getElementById("timer-info");
+      if (currentTimerStudent && timerIntervalId) {
+        info.textContent = currentTimerStudent + " さんの作業時間を計測中…";
+      } else if (currentTimerStudent) {
+        info.textContent = currentTimerStudent + " さんのタイマーは一時停止中です。";
+      } else {
+        info.textContent = "";
+      }
+    }
+
+    function formatSeconds(sec) {
+      sec = Math.floor(sec || 0);
+      const h = String(Math.floor(sec / 3600)).padStart(2, "0");
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+      const s = String(sec % 60).padStart(2, "0");
+      return h + ":" + m + ":" + s;
+    }
+
+    // ---- 写真アップロード（枚数だけカウント） ----
+    function handlePhotoUpload() {
+      const sel = document.getElementById("photo-student-select");
+      const name = sel.value;
+      const input = document.getElementById("photo-upload-input");
+      const files = input.files;
+      if (!name || !students[name]) {
+        alert("写真に紐づける学生を選択してください。");
+        return;
+      }
+      if (!files || files.length === 0) {
+        alert("写真ファイルを選択してください。");
+        return;
+      }
+      const student = students[name];
+      student.photoUploads += files.length;
+
+      const list = document.getElementById("photo-upload-list");
+      const div = document.createElement("div");
+      div.textContent = name + "： " + files.length + "枚の写真（" + new Date().toLocaleString("ja-JP") + "）";
+      list.prepend(div);
+
+      input.value = "";
+      updateContributionTable();
+    }
+
+    // ---- 共有ドキュメント文字数 ----
+    function onDocStudentChange() {
+      const sel = document.getElementById("doc-student-select");
+      const name = sel.value;
+      const ta = document.getElementById("doc-textarea");
+      if (!name || !students[name]) {
+        ta.value = "";
+        document.getElementById("doc-char-count").textContent = "0";
+        return;
+      }
+      ta.value = students[name].docText || "";
+      document.getElementById("doc-char-count").textContent = students[name].docChars || 0;
+    }
+
+    document.getElementById("doc-textarea").addEventListener("input", function () {
+      const sel = document.getElementById("doc-student-select");
+      const name = sel.value;
+      const text = this.value || "";
+      const len = text.length;
+      document.getElementById("doc-char-count").textContent = String(len);
+      if (name && students[name]) {
+        students[name].docText = text;
+        students[name].docChars = len;
+        updateContributionTable();
+      }
+    });
+
+    // ---- ④ 思考プロセス匿名共有 ----
+    function shareThoughtAnonymously() {
+      const sel = document.getElementById("thought-student-select");
+      const name = sel.value;
+      const ta = document.getElementById("thought-textarea");
+      const text = (ta.value || "").trim();
+      if (!name || !students[name]) {
+        alert("投稿者となる学生を選択してください。");
+        return;
+      }
+      if (!text) {
+        alert("思考プロセスを入力してください。");
+        return;
+      }
+      const student = students[name];
+
+      // 匿名表示用の適当なラベル
+      const alias = "メンバー" + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      const entry = {
+        alias,
+        text,
+        createdAt: new Date()
+      };
+      sharedThoughts.unshift(entry);
+
+      student.thoughtCount += 1;
+      renderThoughtFeed();
+      updateContributionTable();
+
+      ta.value = "";
+    }
+
+    function renderThoughtFeed() {
+      const feed = document.getElementById("thought-feed");
+      feed.innerHTML = "";
+      sharedThoughts.forEach(entry => {
+        const card = document.createElement("div");
+        card.className = "thought-card";
+
+        const header = document.createElement("div");
+        header.className = "thought-card-header";
+        const left = document.createElement("span");
+        left.textContent = entry.alias;
+        const right = document.createElement("span");
+        right.textContent = entry.createdAt.toLocaleString("ja-JP");
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const body = document.createElement("div");
+        body.className = "thought-card-body";
+        body.textContent = entry.text;
+
+        card.appendChild(header);
+        card.appendChild(body);
+        feed.appendChild(card);
+      });
+    }
+
+    function clearThoughtInput() {
+      document.getElementById("thought-textarea").value = "";
+    }
+
+    // ---- ⑤ 最終成果物アップロード ----
+    function handleDeliverableUpload() {
+      const sel = document.getElementById("deliverable-student-select");
+      const name = sel.value;
+      const input = document.getElementById("deliverable-upload-input");
+      const files = input.files;
+      if (!name || !students[name]) {
+        alert("成果物に紐づける学生を選択してください。");
+        return;
+      }
+      if (!files || files.length === 0) {
+        alert("成果物ファイルを選択してください。");
+        return;
+      }
+      const student = students[name];
+      student.deliverableUploads += files.length;
+
+      const list = document.getElementById("deliverable-upload-list");
+      const div = document.createElement("div");
+      div.textContent = name + "： " + files.length + "件の成果物（" + new Date().toLocaleString("ja-JP") + "）";
+      list.prepend(div);
+
+      input.value = "";
+      updateContributionTable();
+    }
+
+    // ---- ⑥ LINE発言回数（デモ用・手入力） ----
+    function updateLineMessages() {
+      const sel = document.getElementById("line-student-select");
+      const name = sel.value;
+      const input = document.getElementById("line-message-count-input");
+      const val = Number(input.value || 0);
+      if (!name || !students[name]) {
+        alert("LINE発言回数を登録する学生を選択してください。");
+        return;
+      }
+      if (val < 0) {
+        alert("発言回数は0以上で入力してください。");
+        return;
+      }
+      students[name].lineMessages = val;
+      updateLineSummary();
+      updateContributionTable();
+    }
+
+    function updateLineSummary() {
+      const div = document.getElementById("line-summary");
+      const names = Object.keys(students);
+      if (names.length === 0) {
+        div.textContent = "";
+        return;
+      }
+      let text = "登録されているLINE発言回数：";
+      text += " ";
+      text += names.map(n => n + "：" + students[n].lineMessages + " 回").join(" / ");
+      div.textContent = text;
+    }
+
+    // ---- ⑦ 貢献度計算 ----
+    function calculateContribution() {
+      const names = Object.keys(students);
+      if (names.length === 0) {
+        alert("先に学生を登録してください。");
+        return;
+      }
+
+      // タイマーが動作中なら一旦時間だけ確定させておく
+      if (timerIntervalId && currentTimerStudent) {
+        pauseTimer();
+      }
+
+      const data = names.map(name => students[name]);
+
+      // 最大値の算出（0除算対策）
+      let maxTime = 0, maxChars = 0, maxLine = 0, maxThought = 0, maxUpload = 0;
+      data.forEach(s => {
+        if (s.totalTimeSec > maxTime) maxTime = s.totalTimeSec;
+        if (s.docChars > maxChars) maxChars = s.docChars;
+        if (s.lineMessages > maxLine) maxLine = s.lineMessages;
+        if (s.thoughtCount > maxThought) maxThought = s.thoughtCount;
+        const uploads = s.photoUploads + s.deliverableUploads;
+        if (uploads > maxUpload) maxUpload = uploads;
+      });
+
+      // 正規化 + 重み付け（0〜1）
+      const weights = {
+        time: 0.3,
+        chars: 0.3,
+        line: 0.2,
+        thought: 0.1,
+        upload: 0.1
+      };
+
+      let totalRaw = 0;
+      data.forEach(s => {
+        const uploads = s.photoUploads + s.deliverableUploads;
+        const timeScore = maxTime ? (s.totalTimeSec / maxTime) : 0;
+        const charScore = maxChars ? (s.docChars / maxChars) : 0;
+        const lineScore = maxLine ? (s.lineMessages / maxLine) : 0;
+        const thoughtScore = maxThought ? (s.thoughtCount / maxThought) : 0;
+        const uploadScore = maxUpload ? (uploads / maxUpload) : 0;
+
+        const raw =
+          timeScore * weights.time +
+          charScore * weights.chars +
+          lineScore * weights.line +
+          thoughtScore * weights.thought +
+          uploadScore * weights.upload;
+
+        s._rawScore = raw;
+        totalRaw += raw;
+      });
+
+      // グループ内割合（%）に変換
+      data.forEach(s => {
+        let percent = 0;
+        if (totalRaw > 0 && s._rawScore > 0) {
+          percent = (s._rawScore / totalRaw) * 100;
+        }
+        s._percent = Math.round(percent * 10) / 10; // 小数1桁
+      });
+
+      updateContributionTable();
+
+      const warn = document.getElementById("contribution-warning");
+      warn.textContent = "※指標の重みや計算方法は一例です。授業設計に合わせて任意に変更してください。";
+    }
+
+    function updateContributionTable() {
+      const tbody = document.getElementById("contribution-tbody");
+      const totalCell = document.getElementById("contribution-total");
+      tbody.innerHTML = "";
+
+      const names = Object.keys(students);
+      if (names.length === 0) {
+        totalCell.textContent = "0%";
+        return;
+      }
+
+      let sumPercent = 0;
+      names.forEach(name => {
+        const s = students[name];
+        const tr = document.createElement("tr");
+
+        const uploads = s.photoUploads + s.deliverableUploads;
+        const timeMin = Math.round((s.totalTimeSec || 0) / 60);
+
+        const percent = (typeof s._percent === "number") ? s._percent : 0;
+        sumPercent += percent;
+
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td>${timeMin}</td>
+          <td>${s.docChars || 0}</td>
+          <td>${s.lineMessages || 0}</td>
+          <td>${s.thoughtCount || 0}</td>
+          <td>${uploads}</td>
+          <td>${percent.toFixed(1)}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      totalCell.textContent = sumPercent.toFixed(1) + "%";
+    }
+
+    // 初期表示調整
+    window.addEventListener("load", function () {
+      updateTimerDisplay(true);
+      renderThoughtFeed();
+      updateContributionTable();
+    });
+  </script>
+</body>
+</html>
